@@ -9,7 +9,6 @@ def main():
                 print(frequency)
                 return
             seen.add(frequency)
-    print(seen)
 
 
 if __name__ == "__main__":
