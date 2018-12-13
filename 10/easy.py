@@ -41,19 +41,20 @@ class Lightshow:
     def write_to_image(self, filename="10/output.pbm"):
         img = open("10/output.pbm", "w")
 
-        width = max(point.pos[0] for point in self.lights)
-        height = max(point.pos[1] for point in self.lights)
+        left = min(point.pos[0] for point in self.lights)
+        right = max(point.pos[0] for point in self.lights) + 1
+
+        top = min(point.pos[1] for point in self.lights)
+        bottom = max(point.pos[1] for point in self.lights) + 1
+
         positions = {tuple(point.pos) for point in self.lights}
 
-        x_off = min(point.pos[0] for point in self.lights)
-        y_off = min(point.pos[1] for point in self.lights)
-
         print("P1", file=img)
-        print(width - x_off, height - y_off, file=img)
+        print(right - left, bottom - top, file=img)
 
-        for y in range(height - y_off + 1):
-            for x in range(width - x_off):
-                on = (x + x_off, y + y_off) in positions
+        for y in range(bottom - top):
+            for x in range(right - left):
+                on = (x + left, y + top) in positions
                 print(int(on), end=" ", file=img)
 
             print(file=img)

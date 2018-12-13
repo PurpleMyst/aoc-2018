@@ -1,7 +1,7 @@
 from functools import lru_cache
 
 SIDE = 300
-BOX_LIMIT = 16
+BOX_LIMIT = 12
 
 
 @lru_cache(None)
