@@ -75,55 +75,51 @@ class Unit:
             if unit.alive and unit.faction == -self.faction:
                 yield unit
 
-    def pathfind(self, goal: Position) -> t.List[Position]:
+    def pathfind(self, goal: Position) -> Position:
         from math import inf
 
-        start = (self.y, self.x)
+        start, goal = goal, (self.y, self.x)
 
-        closed = set()
+        Q = priority_dict(
+            [(start, 0)]
+            + [(v, inf) for v in self.game.empty if self.game.is_empty(v)]
+        )
 
-        parents = {start: None}
+        dist = {start: 0}
+        prev = {}
 
-        g = {start: 0}
-        f = priority_dict({start: distance(start, goal)})
+        for v in Q:
+            dist[v] = inf
 
-        while f:
-            current = f.pop_smallest()
-            if current == goal:
-                path = []
-                while current is not None:
-                    path.append(current)
-                    current = parents[current]
-                path = path[::-1]
-                assert path[0] == start
-                assert path[-1] == goal
-                return path
+        dist[start] = 0
 
-            closed.add(current)
+        while Q:
+            u = Q.pop_smallest()
 
-            for neighbor in adjacent(current):
-                if neighbor in closed:
-                    continue
+            for v in adjacent(u):
+                if self.game.is_empty(v):
+                    alt = dist[u] + 1
+                    if alt < dist[v]:
+                        Q[v] = dist[v] = alt
+                        prev[v] = u
 
-                if not self.game.is_empty(neighbor):
-                    continue
-
-                alt_g = g[current] + 1
-
-                if alt_g < g.get(neighbor, inf):
-                    parents[neighbor] = current
-                    g[neighbor] = alt_g
-                    f[neighbor] = g[neighbor] + distance(neighbor, goal)
+        a = set(adjacent(goal))
+        candidates = {(n, d) for n, d in dist.items() if n in a}
+        if candidates:
+            min_d = min(d for _, d in candidates)
+            return min_d, min((n for n, d in candidates if d == min_d))
+        else:
+            return None
 
     def optimal_square(
         self, squares: t.Iterable[Position]
     ) -> t.Optional[Position]:
-        paths = [(self.pathfind(sq), sq) for sq in squares]
-        paths = [(path, sq) for path, sq in paths if path is not None]
+        paths = (self.pathfind(sq) for sq in squares)
+        paths = list(filter(None, paths))
 
         if paths:
-            path, _ = min(paths, key=lambda x: (len(x[0]), *x[1]))
-            return path[1]
+            _, step = min(paths)
+            return step
         else:
             return None
 
@@ -237,7 +233,8 @@ class Game:
         return f.read()
 
     def run_until_someone_wins(self):
-        print(self.draw())
+        f = open("15/output.txt", "w")
+        print(self.draw(), file=f)
         while not self._someone_won():
             for i, unit in enumerate(self.units):
                 if next(unit.targets(), None) is None:
@@ -253,7 +250,7 @@ class Game:
 
             # Units must take turns in reading order.
             self.units = sorted(self.units, key=lambda unit: (unit.y, unit.x))
-            print(self.draw())
+            print(self.draw(), file=f)
 
             self.rounds += 1
 
@@ -287,7 +284,7 @@ class Game:
 def main():
     game = Game.from_lines(open("15/input.txt"))
     game.run_until_someone_wins()
-    print(game.rounds * game.total_hitpoints())
+    print(game.rounds, game.total_hitpoints())
 
 
 if __name__ == "__main__":
