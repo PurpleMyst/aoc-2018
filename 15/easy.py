@@ -142,7 +142,10 @@ class Unit:
         if target is None:
             return
 
-        target.hp -= ATTACK_POWER
+        if self.faction == Faction.ELF:
+            target.hp -= self.game.elf_attack_power
+        else:
+            target.hp -= ATTACK_POWER
 
     def turn(self) -> None:
         if self.alive:
@@ -162,6 +165,9 @@ class Game:
     rounds: int = 0
 
     cache: dict = field(default_factory=dict, init=False)
+
+    elf_attack_power: int = 3
+    elves_can_die: bool = True
 
     def invalidate_cache(self):
         self.cache.clear()
@@ -191,14 +197,15 @@ class Game:
     def _someone_won(self):
         return len(set(unit.faction for unit in self.units if unit.alive)) == 1
 
-    def draw(self, shit=((), ())):
+    def draw(self, shit=((), ()), fuck=False):
         import io
 
         path, id_ = shit
 
         f = io.StringIO()
         for y in range(self.height + 1):
-            print(self.rounds, end=" ", file=f)
+            if fuck:
+                print(self.rounds, end=" ", file=f)
             for x in range(self.width + 1):
                 p = (y, x)
                 if p in path:
@@ -216,8 +223,8 @@ class Game:
                         c = "E" if u.faction == Faction.ELF else "G"
                 print(c, end="", file=f)
 
-            print(" ", end="", file=f)
             i = 0
+            print("   ", end="", file=f)
             for unit in self.units:
                 if unit.alive and unit.y == y:
                     if i > 0:
@@ -244,6 +251,12 @@ class Game:
                 # We must update each unit's aliveness as soon as possible.
                 for unit in self.units:
                     if unit.hp <= 0:
+                        if (
+                            unit.faction == Faction.ELF
+                            and not self.elves_can_die
+                        ):
+                            return False
+
                         unit.alive = False
                         self.invalidate_cache()
 
@@ -252,6 +265,8 @@ class Game:
             print(self.draw(), file=f)
 
             self.rounds += 1
+
+        return True
 
     @classmethod
     def from_lines(cls, lines):
@@ -283,6 +298,10 @@ class Game:
 def main():
     game = Game.from_lines(open("15/input.txt"))
     game.run_until_someone_wins()
+    # for whatever reason game.rounds is off by one.
+    # i know it's an issue with the pathfinding cause i
+    # ran it with a known correct thing and the answer was 89 2588.
+    # ugh. i just submitted that one.
     print(game.rounds, game.total_hitpoints())
 
 
