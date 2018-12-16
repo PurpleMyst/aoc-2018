@@ -107,9 +107,8 @@ class Unit:
         candidates = {(n, d) for n, d in dist.items() if n in a}
         if candidates:
             min_d = min(d for _, d in candidates)
-            return min_d, min((n for n, d in candidates if d == min_d))
-        else:
-            return None
+            if min_d is not inf:
+                return min_d, min((n for n, d in candidates if d == min_d))
 
     def optimal_square(
         self, squares: t.Iterable[Position]
