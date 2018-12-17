@@ -113,11 +113,18 @@ class Unit:
     def optimal_square(
         self, squares: t.Iterable[Position]
     ) -> t.Optional[Position]:
-        paths = (self.pathfind(sq) for sq in squares)
-        paths = list(filter(None, paths))
+        paths = ((self.pathfind(sq), sq) for sq in squares)
+        paths = list(filter(lambda kv: kv[0], paths))
 
         if paths:
-            _, step = min(paths)
+            # Fuck this problem.
+            # Really. Fuck this problem. The wording on tie-breakers is wrong.
+            # It says that you must choose the first *step* in reading order.
+            # However, it really means you must choose the first *target* in
+            # reading order.
+            # Fuck this problem.
+
+            (_, step), _ = min(paths, key=lambda x: (x[0][0], x[1]))
             return step
         else:
             return None
@@ -197,54 +204,12 @@ class Game:
     def _someone_won(self):
         return len(set(unit.faction for unit in self.units if unit.alive)) == 1
 
-    def draw(self, shit=((), ()), fuck=False):
-        import io
-
-        path, id_ = shit
-
-        f = io.StringIO()
-        for y in range(self.height + 1):
-            if fuck:
-                print(self.rounds, end=" ", file=f)
-            for x in range(self.width + 1):
-                p = (y, x)
-                if p in path:
-                    c = hex(id_)[-1]
-                else:
-                    u = self.find_unit(p)
-                    if u is None:
-                        if p in self.empty:
-                            c = "."
-                        elif p in self.walls:
-                            c = "#"
-                        else:
-                            assert False, p
-                    else:
-                        c = "E" if u.faction == Faction.ELF else "G"
-                print(c, end="", file=f)
-
-            i = 0
-            print("   ", end="", file=f)
-            for unit in self.units:
-                if unit.alive and unit.y == y:
-                    if i > 0:
-                        print(", ", end="", file=f)
-                    c = "E" if unit.faction == Faction.ELF else "G"
-                    print(f"{c}({unit.hp})", end="", file=f)
-                    i += 1
-
-            print(file=f)
-
-        f.seek(0)
-        return f.read()
-
     def run_until_someone_wins(self):
-        f = open("15/output.txt", "w")
-        print(self.draw(), file=f)
         while not self._someone_won():
             for i, unit in enumerate(self.units):
                 if next(unit.targets(), None) is None:
-                    return
+                    factions = {u.faction for u in self.units if u.alive}
+                    return len(factions) == 1
 
                 unit.turn()
 
@@ -262,7 +227,6 @@ class Game:
 
             # Units must take turns in reading order.
             self.units = sorted(self.units, key=lambda unit: (unit.y, unit.x))
-            print(self.draw(), file=f)
 
             self.rounds += 1
 
@@ -298,11 +262,7 @@ class Game:
 def main():
     game = Game.from_lines(open("15/input.txt"))
     game.run_until_someone_wins()
-    # for whatever reason game.rounds is off by one.
-    # i know it's an issue with the pathfinding cause i
-    # ran it with a known correct thing and the answer was 89 2588.
-    # ugh. i just submitted that one.
-    print(game.rounds, game.total_hitpoints())
+    print(game.rounds * game.total_hitpoints())
 
 
 if __name__ == "__main__":

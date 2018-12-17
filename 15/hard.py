@@ -1,18 +1,23 @@
-import itertools
+import multiprocessing
 
 from easy import Game
 
 
-def main():
-    def fuck(n: int) -> bool:
-        assert n < 5000
-        game = Game.from_lines(open("15/input.txt"))
-        game.elf_attack_power = n
-        game.elves_can_die = False
-        return (game.run_until_someone_wins(), n)
+def try_power(n: int) -> bool:
+    game = Game.from_lines(open("15/input.txt"))
+    game.elf_attack_power = n
+    game.elves_can_die = False
+    elves_win = game.run_until_someone_wins()
+    if elves_win:
+        return game.rounds * game.total_hitpoints
+    else:
+        return None
 
-    n = next(filter(lambda kv: kv[0], map(fuck, itertools.count(3))))[1]
-    print(n)
+
+def main():
+    pool = multiprocessing.Pool()
+    result = next(filter(None, pool.imap(try_power, range(3, 25))))
+    print(result)
 
 
 if __name__ == "__main__":
